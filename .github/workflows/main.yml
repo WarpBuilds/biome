@@ -17,7 +17,7 @@ env:
 jobs:
   format:
     name: Format Rust Files
-    runs-on: depot-ubuntu-24.04-arm-16
+    runs-on: warp-ubuntu-2404-arm64-16x
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -42,7 +42,7 @@ jobs:
 
   lint:
     name: Lint Rust Files
-    runs-on: depot-ubuntu-24.04-arm-16
+    runs-on: warp-ubuntu-2404-arm64-16x
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -62,7 +62,7 @@ jobs:
 
   check-dependencies:
     name: Check Dependencies
-    runs-on: depot-ubuntu-24.04-arm-16
+    runs-on: warp-ubuntu-2404-arm64-16x
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -87,7 +87,7 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-          - os: depot-ubuntu-24.04-arm-16
+          - os: warp-ubuntu-2404-arm64-16x
           - os: macos-latest
     steps:
       - name: Checkout repository
@@ -109,7 +109,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-latest, depot-ubuntu-24.04-arm-16 ]
+        os: [windows-latest, warp-ubuntu-2404-arm64-16x]
     steps:
       # ref: https://github.com/orgs/community/discussions/26952
       - name: Support longpaths
