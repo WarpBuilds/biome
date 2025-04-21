@@ -16,7 +16,7 @@ env:
 
 jobs:
   format:
-    name: Format Rust Files
+    name: Format Rust Files with WarpBuild
     runs-on: warp-ubuntu-2404-arm64-16x
     steps:
       - name: Checkout repository
@@ -41,7 +41,7 @@ jobs:
           taplo format --check
 
   lint:
-    name: Lint Rust Files
+    name: Lint Rust Files with WarpBuild
     runs-on: warp-ubuntu-2404-arm64-16x
     steps:
       - name: Checkout repository
@@ -61,7 +61,7 @@ jobs:
         run: cargo lint
 
   check-dependencies:
-    name: Check Dependencies
+    name: Check Dependencies with WarpBuild
     runs-on: warp-ubuntu-2404-arm64-16x
     steps:
       - name: Checkout repository
@@ -81,7 +81,7 @@ jobs:
         run: cargo +nightly udeps --all-targets
 
   test:
-    name: Test
+    name: "Test with ${{ matrix.os == 'warp-ubuntu-2404-arm64-16x' && 'WarpBuild' || 'GitHub Actions' }}"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -100,11 +100,11 @@ jobs:
           cache-base: main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Run tests on ${{ matrix.os }}
+      - name: "Run tests on ${{ matrix.os }}"
         run: cargo test --workspace
 
   coverage:
-    name: Test262 Coverage
+    name: "Test262 Coverage with ${{ matrix.os == 'warp-ubuntu-2404-arm64-16x' && 'WarpBuild' || 'GitHub Actions' }}"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

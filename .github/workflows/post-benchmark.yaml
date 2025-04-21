@@ -43,7 +43,7 @@ jobs:
 
               // Determine runner type from job name
               let jobProvider = 'github';
-              if (job.name.includes('Build on WarpBuild Runner')) {
+              if (job.name.includes('WarpBuild')) {
                 jobProvider = 'warpbuild';
               }
 
