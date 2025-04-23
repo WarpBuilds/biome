@@ -70,27 +70,38 @@ jobs:
             if git merge-base --is-ancestor HEAD upstream/$branch_name; then
               echo "Already up to date with upstream/$branch_name"
             else
-              # We're behind upstream, proceed with merge
-              # Try standard merge first with the upstream commit message
+              # First, get a list of workflow files that exist in upstream but not in ours (deleted by us)
+              DELETED_WORKFLOW_FILES=$(git diff --name-only --diff-filter=D HEAD upstream/$branch_name | grep -E "^.github/workflows/")
+              if [[ -n "$DELETED_WORKFLOW_FILES" ]]; then
+                echo "Workflow files deleted by us but present in upstream:"
+                echo "$DELETED_WORKFLOW_FILES"
+              fi
+
+              # Try the merge (will likely fail with conflicts)
               git merge upstream/$branch_name -m "$UPSTREAM_COMMIT_MSG" || true
 
-              # Handle conflicts - keep our versions of workflow files, use theirs for everything else
+              # Handle conflicts
               if git status | grep -q "You have unmerged paths"; then
                 echo "Resolving conflicts..."
+
                 # For each conflicted file
                 git diff --name-only --diff-filter=U | while read -r FILE; do
                   if [[ "$FILE" == .github/workflows/* ]]; then
-                    # For workflow files, keep our version (or deletion)
-                    if [[ -f "$FILE" ]]; then
+                    echo "Handling workflow file conflict: $FILE"
+
+                    # Check if this was a file we deleted
+                    if echo "$DELETED_WORKFLOW_FILES" | grep -q "^$FILE$"; then
+                      echo "This workflow file was deleted by us - keeping it deleted"
+                      git rm "$FILE"
+                    else
+                      # For workflow files we modified, keep our version
+                      echo "Keeping our version of workflow file"
                       git checkout --ours -- "$FILE"
                       git add "$FILE"
-                    else
-                      # If we deleted it, keep it deleted
-                      git rm --cached "$FILE"
                     fi
-                    echo "Kept our version of $FILE"
                   else
                     # For non-workflow files, use theirs
+                    echo "Using upstream version for non-workflow file: $FILE"
                     git checkout --theirs -- "$FILE"
                     git add "$FILE"
                   fi
