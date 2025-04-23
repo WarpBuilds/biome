@@ -3,12 +3,10 @@
 	"linter": {
 		"rules": {
 			"style": {
-				"noRestrictedGlobals": {
+				"useImportType": {
 					"level": "error",
 					"options": {
-						"deniedGlobals": {
-              "$": "jQuery is not allowed. Use native DOM manipulation instead."
-            }
+						"style": "separatedType"
 					}
 				}
 			}
