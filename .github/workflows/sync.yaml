@@ -113,3 +113,39 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Sync branch
+        run: |
+          git fetch upstream
+          git checkout main
+          # Create a list of your workflow files that should be preserved
+          PROTECTED_FILES=".github/workflows/main.yml .github/workflows/sync.yaml .github/workflows/post-benchmark.yaml"
+
+          # Attempt regular merge first
+          git merge upstream/main || true
+
+          # Handle conflicts - keep our versions of workflow files
+          if git status | grep -q "You have unmerged paths"; then
+            echo "Resolving conflicts..."
+            # For each conflicted file
+            git diff --name-only --diff-filter=U | while read -r FILE; do
+              if [[ "$FILE" == .github/workflows/* ]]; then
+                # For workflow files, keep our version (or deletion)
+                if [[ -f "$FILE" ]]; then
+                  git checkout --ours -- "$FILE"
+                  git add "$FILE"
+                else
+                  # If we deleted it, keep it deleted
+                  git rm --cached "$FILE"
+                fi
+                echo "Kept our version of $FILE"
+              else
+                # For non-workflow files, use theirs
+                git checkout --theirs -- "$FILE"
+                git add "$FILE"
+              fi
+            done
+
+            # Complete the merge
+            git commit --no-edit
+          fi
