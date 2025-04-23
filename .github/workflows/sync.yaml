@@ -63,12 +63,6 @@ jobs:
             local branch_name=$1
             echo "Syncing branch: $branch_name"
 
-            # Save any workflow files we might have modified
-            mkdir -p /tmp/workflow-backup
-            if [ -d ".github/workflows" ]; then
-              cp -r .github/workflows/* /tmp/workflow-backup/ || true
-            fi
-
             # Get just the commit message from upstream
             UPSTREAM_COMMIT_MSG=$(git log -1 --pretty=format:"%s" upstream/$branch_name)
 
@@ -78,27 +72,32 @@ jobs:
             else
               # We're behind upstream, proceed with merge
               # Try standard merge first with the upstream commit message
-              if git merge upstream/$branch_name -m "$UPSTREAM_COMMIT_MSG"; then
-                echo "Standard merge successful"
-              else
-                # If standard merge fails, abort it
-                git merge --abort
+              git merge upstream/$branch_name -m "$UPSTREAM_COMMIT_MSG" || true
 
-                # Try again with strategy to prefer upstream changes
-                echo "Standard merge failed. Using 'theirs' strategy to resolve conflicts automatically."
-                git merge -X theirs upstream/$branch_name -m "$UPSTREAM_COMMIT_MSG"
-              fi
-            fi
+              # Handle conflicts - keep our versions of workflow files, use theirs for everything else
+              if git status | grep -q "You have unmerged paths"; then
+                echo "Resolving conflicts..."
+                # For each conflicted file
+                git diff --name-only --diff-filter=U | while read -r FILE; do
+                  if [[ "$FILE" == .github/workflows/* ]]; then
+                    # For workflow files, keep our version (or deletion)
+                    if [[ -f "$FILE" ]]; then
+                      git checkout --ours -- "$FILE"
+                      git add "$FILE"
+                    else
+                      # If we deleted it, keep it deleted
+                      git rm --cached "$FILE"
+                    fi
+                    echo "Kept our version of $FILE"
+                  else
+                    # For non-workflow files, use theirs
+                    git checkout --theirs -- "$FILE"
+                    git add "$FILE"
+                  fi
+                done
 
-            # Restore our workflow files regardless of merge strategy
-            if [ -d "/tmp/workflow-backup" ] && [ -n "$(ls -A /tmp/workflow-backup)" ]; then
-              mkdir -p .github/workflows
-              cp -r /tmp/workflow-backup/* .github/workflows/
-              git add .github/workflows/
-              if git diff --staged --quiet; then
-                echo "No changes to workflow files"
-              else
-                git commit -m "Preserve custom workflow files after sync"
+                # Complete the merge with original commit message
+                git commit --no-edit
               fi
             fi
 
@@ -113,39 +112,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-
-      - name: Sync branch
-        run: |
-          git fetch upstream
-          git checkout main
-          # Create a list of your workflow files that should be preserved
-          PROTECTED_FILES=".github/workflows/main.yml .github/workflows/sync.yaml .github/workflows/post-benchmark.yaml"
-
-          # Attempt regular merge first
-          git merge upstream/main || true
-
-          # Handle conflicts - keep our versions of workflow files
-          if git status | grep -q "You have unmerged paths"; then
-            echo "Resolving conflicts..."
-            # For each conflicted file
-            git diff --name-only --diff-filter=U | while read -r FILE; do
-              if [[ "$FILE" == .github/workflows/* ]]; then
-                # For workflow files, keep our version (or deletion)
-                if [[ -f "$FILE" ]]; then
-                  git checkout --ours -- "$FILE"
-                  git add "$FILE"
-                else
-                  # If we deleted it, keep it deleted
-                  git rm --cached "$FILE"
-                fi
-                echo "Kept our version of $FILE"
-              else
-                # For non-workflow files, use theirs
-                git checkout --theirs -- "$FILE"
-                git add "$FILE"
-              fi
-            done
-
-            # Complete the merge
-            git commit --no-edit
-          fi
