@@ -86,7 +86,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: warp-windows-2022-x64-2x
+          - os: warp-custom-benchmark-windows
           - os: warp-ubuntu-2404-arm64-16x
           - os: warp-macos-14-arm64-6x
     steps:
